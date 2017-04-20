@@ -169,7 +169,7 @@ class Mailer extends BaseMailer
                     break;
 
                 default:
-                    Log::error("Driver {$this->driver} is not implemented in laravel-switchable-mail!");
+                    Log::error("Driver {$real_driver} is not implemented in laravel-switchable-mail!");
                     $real_driver = null;
             }
 
