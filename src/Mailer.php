@@ -37,6 +37,19 @@ class Mailer extends BaseMailer
     }
 
     /**
+     * Send a new message using a view.
+     *
+     * @param  string|array  $view
+     * @param  array  $data
+     * @param  \Closure|string  $callback
+     * @return void
+     */
+    public function send($view, array $data, $callback)
+    {
+        return $this->sendThrough('default', $view, $data, $callback);
+    }
+
+    /**
      * Send a new message using a view through specified driver.
      *
      * @param  string $driver
@@ -65,7 +78,14 @@ class Mailer extends BaseMailer
             $message->to($this->to['address'], $this->to['name'], true);
         }
 
-        $driver = $this->copyDriverConfig($driver);
+        if ($driver === 'default')
+        {
+            // special value. Restore original driver
+            $driver = $this->swiftManager->getDefaultDriver();
+            $this->restoreDriverConfig($driver);
+        }
+        else
+            $driver = $this->setDriverConfig($driver);
 
         return $this->sendSwiftMessage($message->getSwiftMessage(), $driver);
     }
@@ -137,13 +157,38 @@ class Mailer extends BaseMailer
     }
 
     /**
+     * Return a configuration section for a driver
+     *
+     * @param string $driver
+     * @return string|null
+     */
+    private function getConfigKeyForDriver($driver)
+    {
+        $driver = strtolower($driver);
+
+        // available Laravel mailers can be found at src/Illuminate/Mail/TransportManager.php
+        switch ($driver)
+        {
+            case 'smtp':
+                return 'mail';
+
+            case 'mailgun':
+                return 'services.mailgun';
+
+            default:
+                Log::error("Driver {$driver} is not implemented in laravel-switchable-mail!");
+                return null;
+        }
+    }
+
+    /**
      * Copy configuration from config/switchable-mail.php to driver-specific place
      *
      * @param string $name Driver name
      *
      * @return string The REAL driver name
      */
-    private function copyDriverConfig($name)
+    private function setDriverConfig($name)
     {
         $config = config("switchable-mail.{$name}");
 
@@ -154,31 +199,52 @@ class Mailer extends BaseMailer
         }
         elseif (array_key_exists('driver', $config))
         {
-            $real_driver = strtolower($config['driver']);
+            $real_driver = $config['driver'];
 
-            // copy configuration block to specified driver config
-            // available Laravel mailers can be found at src/Illuminate/Mail/TransportManager.php
-            switch ($real_driver)
-            {
-                case 'smtp':
-                    config(['mail' => array_merge(config('mail'), $config)]);
-                    break;
+            $config_key = $this->getConfigKeyForDriver($real_driver);
 
-                case 'mailgun':
-                    config(['services.mailgun' => array_merge(config('services.mailgun'), $config)]);
-                    break;
+            if ($config_key) {
+                // if we set new driver, then save old config, set new config and reset transport object
+                $old_config = config($config_key);
 
-                default:
-                    Log::error("Driver {$real_driver} is not implemented in laravel-switchable-mail!");
-                    $real_driver = null;
-            }
+                if (array_key_exists('saved', $old_config))
+                    unset($old_config['saved']);
 
-            if ($real_driver) {
-                // resetting driver instance, if we change driver
+                // save old config
+                $old_config['saved'] = $old_config;
+
+                config([$config_key => array_merge($old_config, $config)]);
+
+                // resetting driver instance to apply new configuration
+                $this->swiftManager->resetMailer($real_driver);
                 $this->swiftManager->resetTransportManager();
             }
         }
 
         return $real_driver;
+    }
+
+    /**
+     * Restore configuration of specified driver
+     *
+     * @param string $name Driver name
+     *
+     */
+    private function restoreDriverConfig($name)
+    {
+        $config_key = $this->getConfigKeyForDriver($name);
+
+        $config = config($config_key);
+        if (!$config_key || empty($config) || !array_key_exists('saved', $config))
+        {
+            Log::error("[SwitchableMail] Cannot restore default mail configuration for driver $name! It's a bug!");
+            return;
+        }
+
+        config([$config_key => array_merge($config, $config['saved'])]);
+
+        // resetting driver instance to apply new configuration
+        $this->swiftManager->resetMailer($name);
+        $this->swiftManager->resetTransportManager();
     }
 }
