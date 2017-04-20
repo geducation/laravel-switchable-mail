@@ -4,6 +4,7 @@ namespace KVZ\Laravel\SwitchableMail;
 
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Mail\Mailer as BaseMailer;
+use Log;
 
 class Mailer extends BaseMailer
 {
@@ -13,6 +14,14 @@ class Mailer extends BaseMailer
      * @var \KVZ\Laravel\SwitchableMail\SwiftMailerManager
      */
     protected $swiftManager;
+
+    /**
+     * Driver name for sending
+     *
+     * @var string
+     */
+    protected $usingDriver;
+
 
     /**
      * Get the Swift Mailer Manager instance.
@@ -47,7 +56,13 @@ class Mailer extends BaseMailer
             $this->events->fire(new MessageSending($message));
         }
 
-        $swift = $this->swiftManager->mailer(MailDriver::forMessage($message));
+        $driver = MailDriver::forMessage($message);
+
+        // override driver only if the driver name is provided through 'using'
+        if (!empty($this->usingDriver))
+            $driver = $this->usingDriver;
+
+        $swift = $this->swiftManager->mailer($driver);
 
         try {
             return $swift->send($message, $this->failedRecipients);
@@ -95,5 +110,38 @@ class Mailer extends BaseMailer
 
         // Our $swift is managed by the SwiftMailerManager singleton,
         // so just let $this->swift go.
+    }
+
+    /**
+     * Set the driver name for sending
+     *
+     * @param string $name the mail driver name (from config/switchable-mail.php)
+     *
+     */
+    public function useDriver($name)
+    {
+        $config = config("switchable-mail.$name");
+
+        if (!empty($config) && array_key_exists('driver', $config))
+        {
+            // set driver to use (one of Laravel implemented drivers: smtp, mandrill, mailgun, etc...)
+            $this->usingDriver = $config['driver'];
+
+            // copy configuration block to specified driver config
+            // available Laravel mailers can be found at src/Illuminate/Mail/TransportManager.php
+            switch ($this->usingDriver)
+            {
+                case 'smtp':
+                    config(['mail' => $config]);
+                    break;
+
+                case 'mailgun':
+                    config(['services.mailgun' => $config]);
+                    break;
+
+                default:
+                    Log::error("Driver {$this->usingDriver} is not implemented in laravel-switchable-mail!");
+            }
+        }
     }
 }

@@ -10,4 +10,13 @@ return [
     //     'example.com',
     // ],
 
+    // to use with Mail::useDriver('another_smtp');
+
+    // 'another_smtp' => [
+    //  'driver'   => 'smtp',
+    //  'host'     => 'smtp.example.com',
+    //  'port'     => 2525,
+    //  'username' => 'non_default_user',
+    //  'password' => 'user_password',
+    //],
 ];
