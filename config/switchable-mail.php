@@ -10,7 +10,7 @@ return [
     //     'example.com',
     // ],
 
-    // to use with Mail::useDriver('another_smtp');
+    // to use with Mail::sendThrough('another_smtp', ...);
 
     // 'another_smtp' => [
     //  'driver'   => 'smtp',

@@ -37,6 +37,16 @@ You should install the mail drivers not provided by `Laravel` at the meantime, s
 	// 'mailgun' => [
 	//     'example.com',
 	// ],
+
+    // to use with Mail::sendThrough('another_smtp', ...);
+
+    // 'another_smtp' => [
+    //  'driver'   => 'smtp',
+    //  'host'     => 'smtp.example.com',
+    //  'port'     => 2525,
+    //  'username' => 'non_default_user',
+    //  'password' => 'user_password',
+    //],
 	```
 
 Two mail drivers are available:
@@ -47,7 +57,24 @@ Two mail drivers are available:
 
 ## Usage
 
-Nothing needs to be done, just use `Laravel Mail` as usual.
+If you want to send mail through different driver, 
+just call method `Mail::sendThrough($driver, $view, array $data, $callback)`
+
+Example:
+```php
+...
+$email = 'test@example.com';
+$subject = 'mail subject';
+
+Mail::sendThrough('another_smtp', 'mail.welcome', ['email' => $email], 
+  function($mail) use ($email, $subject) {
+	$mail
+	  ->from(config('mail.from.address'), config('mail.from.name'))
+	  ->to($email)
+	  ->subject($subject);
+});
+
+```
 
 ## Thanks to
 [ElfSundae](https://github.com/ElfSundae)

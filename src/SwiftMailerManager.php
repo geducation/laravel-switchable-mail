@@ -46,6 +46,15 @@ class SwiftMailerManager extends Manager
     }
 
     /**
+     * Reinitialize transport manager after driver changing
+     */
+    public function resetTransportManager()
+    {
+        // always get new instance, so if mailer config has been changed, it's instantiate with new config
+        return $this->setTransportManager(new TransportManager($this->app));
+    }
+
+    /**
      * Get a swift mailer instance.
      *
      * @param  string|null  $driver
