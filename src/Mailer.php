@@ -235,13 +235,15 @@ class Mailer extends BaseMailer
         $config_key = $this->getConfigKeyForDriver($name);
 
         $config = config($config_key);
-        if (!$config_key || empty($config) || !array_key_exists('saved', $config))
+        if (!$config_key || empty($config))
         {
             Log::error("[SwitchableMail] Cannot restore default mail configuration for driver $name! It's a bug!");
             return;
         }
 
-        config([$config_key => array_merge($config, $config['saved'])]);
+        // change config only if we saved it previously
+        if (array_key_exists('saved', $config))
+            config([$config_key => array_merge($config, $config['saved'])]);
 
         // resetting driver instance to apply new configuration
         $this->swiftManager->resetMailer($name);
