@@ -44,7 +44,7 @@ class Mailer extends BaseMailer
      * @param  \Closure|string  $callback
      * @return void
      */
-    public function send($view, array $data, $callback)
+    public function send($view, array $data = array(), $callback = null)
     {
         return $this->sendThrough('default', $view, $data, $callback);
     }
