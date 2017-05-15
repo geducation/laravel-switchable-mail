@@ -31,7 +31,10 @@ class MailServiceProvider extends ServiceProvider
 
         $this->registerSwiftMailerManager();
 
-        $this->registerMailer();
+        $this->registerIlluminateMailer();
+
+        $this->registerMarkdownRenderer();
+
     }
 
     /**
@@ -52,7 +55,7 @@ class MailServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    protected function registerMailer()
+    protected function registerIlluminateMailer()
     {
         $this->app->singleton('mailer', function ($app) {
             // Once we have create the mailer instance, we will set a container instance
@@ -94,8 +97,6 @@ class MailServiceProvider extends ServiceProvider
      */
     protected function setMailerDependencies($mailer, $app)
     {
-        parent::setMailerDependencies($mailer, $app);
-
         $mailer->setSwiftMailerManager($app['swift.mailer.manager']);
     }
 
