@@ -4,6 +4,8 @@ namespace KVZ\Laravel\SwitchableMail;
 
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Mail\Mailer as BaseMailer;
+use Illuminate\Contracts\Mail\Mailable as MailableContract;
+use Illuminate\Contracts\Mail\MailQueue as MailQueueContract;
 use Log;
 
 class Mailer extends BaseMailer
@@ -60,6 +62,10 @@ class Mailer extends BaseMailer
      */
     public function sendThrough($driver, $view, array $data, $callback)
     {
+        //if ($view instanceof MailableContract) {
+        //    return $this->sendMailable($view);
+        //}
+
         // First we need to parse the view, which could either be a string or an array
         // containing both an HTML and plain text versions of the view which should
         // be used when sending an e-mail. We will extract both of them out here.
@@ -72,11 +78,18 @@ class Mailer extends BaseMailer
         // to creating view based emails that are able to receive arrays of data.
         $this->addContent($message, $view, $plain, $raw, $data);
 
-        $this->callMessageBuilder($callback, $message);
+        call_user_func($callback, $message);
 
+        // If a global "to" address has been set, we will set that address on the mail
+        // message. This is primarily useful during local development in which each
+        // message should be delivered into a single mail address for inspection.
         if (isset($this->to['address'])) {
-            $message->to($this->to['address'], $this->to['name'], true);
+            $this->setGlobalTo($message);
         }
+
+        //if (isset($this->to['address'])) {
+        //    $message->to($this->to['address'], $this->to['name'], true);
+        //}
 
         if ($driver === 'default')
         {
@@ -87,7 +100,9 @@ class Mailer extends BaseMailer
         else
             $driver = $this->setDriverConfig($driver);
 
-        return $this->sendSwiftMessage($message->getSwiftMessage(), $driver);
+        $this->sendSwiftMessage($message->getSwiftMessage(), $driver);
+
+        $this->dispatchSentEvent($message);
     }
 
     /**
