@@ -190,6 +190,12 @@ class Mailer extends BaseMailer
             case 'mailgun':
                 return 'services.mailgun';
 
+            case 'ses':
+                return 'services.ses';
+
+            case 'sparkpost':
+                return 'services.sparkpost';
+
             default:
                 Log::error("Driver {$driver} is not implemented in laravel-switchable-mail!");
                 return null;
